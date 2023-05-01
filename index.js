@@ -42,10 +42,18 @@ io.on("connection", (socket) => {
 
   //join room
   socket.on("join_room", (data) => {
-    const room = data.roomToJoin;
-    socket.join(room);
+    const roomId = data.roomToJoin;
+    socket.join(roomId);
     socket.emit("joined_room", data);
-    console.log(`joined room: ${room}`);
+    console.log(`joined room: ${roomId}`);
+    console.log(socket.rooms);
+  });
+
+  //leave room
+  socket.on("leave_room", (data) => {
+    socket.leave(data.roomId);
+    socket.emit("left_room");
+    console.log(`left room: ${data.roomId}`);
     console.log(socket.rooms);
   });
 
