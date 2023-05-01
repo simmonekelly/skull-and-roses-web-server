@@ -26,39 +26,36 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log(`user connected: ${socket.id}`);
 
+  socket.emit("user_connected", { userId: socket.id });
+
   //   creating a new game room
   socket.on("create_room", () => {
     const roomId = uniqueNamesGenerator({
       dictionaries: [adjectives, colors, animals],
       separator: "-",
-    }); // big_red_donkey
-    // const shortName = uniqueNamesGenerator({
-    //     dictionaries: [adjectives, animals, colors], // colors can be omitted here as not used
-    //     length: 2
-    //   }); // big-donkey
-    // const roomId = uuidv4();
+    });
     socket.join(roomId);
     socket.emit("room-created", { roomId });
-    console.log(roomId);
+    console.log(`room created: ${roomId}`);
+    console.log(socket.rooms);
   });
 
   //join room
   socket.on("join_room", (data) => {
-    console.log(data);
     const room = data.roomToJoin;
     socket.join(room);
     socket.emit("joined_room", data);
+    console.log(`joined room: ${room}`);
+    console.log(socket.rooms);
   });
 
   socket.on("card_picked", (data) => {
+    console.log("card picked");
     console.log(data);
-    const userId = socket.id;
-    //send to front end
+    console.log(socket.rooms);
 
-    //isnt sending to room
-    socket.in(data.room).emit("display_picked_card", data);
-    // socket.emit("display_picked_card", data); // works and sends data to front end
-    // socket.broadcast.emit("display_picked_card", { ...data, userId });
+    //send to front end
+    io.in(data.room).emit("display_picked_card", data);
   });
 });
 
