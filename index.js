@@ -26,7 +26,9 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log(`user connected: ${socket.id}`);
 
-  socket.emit("user_connected", { userId: socket.id });
+  socket.on("hello", (data) => {
+    console.log({ data });
+  });
 
   //   creating a new game room
   socket.on("create_room", () => {
@@ -34,36 +36,9 @@ io.on("connection", (socket) => {
       dictionaries: [adjectives, colors, animals],
       separator: "-",
     });
-    socket.join(roomId);
-    socket.emit("room-created", { roomId });
-    console.log(`room created: ${roomId}`);
-    console.log(socket.rooms);
-  });
-
-  //join room
-  socket.on("join_room", (data) => {
-    const roomId = data.roomToJoin;
-    socket.join(roomId);
-    socket.emit("joined_room", data);
-    console.log(`joined room: ${roomId}`);
-    console.log(socket.rooms);
-  });
-
-  //leave room
-  socket.on("leave_room", (data) => {
-    socket.leave(data.roomId);
-    socket.emit("left_room");
-    console.log(`left room: ${data.roomId}`);
-    console.log(socket.rooms);
-  });
-
-  socket.on("card_picked", (data) => {
-    console.log("card picked");
-    console.log(data);
-    console.log(socket.rooms);
-
-    //send to front end
-    io.in(data.room).emit("display_picked_card", data);
+    console.log({ roomId });
+    // socket.join(roomId);//
+    // setRoomId(roomId);
   });
 });
 
