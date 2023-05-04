@@ -26,19 +26,18 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log(`user connected: ${socket.id}`);
 
-  socket.on("hello", (data) => {
-    console.log({ data });
-  });
+  //   socket.on("hello", (data) => {
+  //     console.log({ data });
+  //   });
 
   //   creating a new game room
-  socket.on("create_room", () => {
+  socket.on("create_room", (callback) => {
     const roomId = uniqueNamesGenerator({
       dictionaries: [adjectives, colors, animals],
       separator: "-",
     });
     console.log({ roomId });
-    // socket.join(roomId);//
-    // setRoomId(roomId);
+    callback(roomId);
   });
 });
 
