@@ -45,6 +45,7 @@ io.on("connection", (socket) => {
     createRoom(room);
   });
 
+  //when a user joins a game room
   socket.on("join_room", (roomToJoin, joinRoom) => {
     console.log(`${socket.id} joined room ${roomToJoin}`);
     if (rooms.find((room) => room.roomId === roomToJoin)) {
@@ -54,13 +55,9 @@ io.on("connection", (socket) => {
       joinRoom(room);
 
       io.in(room.roomId).emit("new_user_joins", room);
-
-      //wont emit to room people already in room
     } else {
-      //we want this to error out
+      //handle error
     }
-
-    // need to emit update to room with new player number
   });
 });
 
