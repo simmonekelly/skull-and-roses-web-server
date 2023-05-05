@@ -23,47 +23,41 @@ const io = new Server(server, {
   },
 });
 
+const rooms = [];
+
 io.on("connection", (socket) => {
   console.log(`user connected: ${socket.id}`);
 
-  socket.emit("user_connected", { userId: socket.id });
-
   //   creating a new game room
-  socket.on("create_room", () => {
+  socket.on("create_room", (createRoom) => {
     const roomId = uniqueNamesGenerator({
       dictionaries: [adjectives, colors, animals],
       separator: "-",
     });
+
+    const room = {
+      roomId: roomId,
+      players: [socket.id],
+    };
+
+    rooms.push(room);
     socket.join(roomId);
-    socket.emit("room-created", { roomId });
-    console.log(`room created: ${roomId}`);
-    console.log(socket.rooms);
+    createRoom(room);
   });
 
-  //join room
-  socket.on("join_room", (data) => {
-    const roomId = data.roomToJoin;
-    socket.join(roomId);
-    socket.emit("joined_room", data);
-    console.log(`joined room: ${roomId}`);
-    console.log(socket.rooms);
-  });
+  //when a user joins a game room
+  socket.on("join_room", (roomToJoin, joinRoom) => {
+    console.log(`${socket.id} joined room ${roomToJoin}`);
+    if (rooms.find((room) => room.roomId === roomToJoin)) {
+      const room = rooms.find((room) => room.roomId === roomToJoin);
+      room.players.push(socket.id);
+      socket.join(room.roomId);
+      joinRoom(room);
 
-  //leave room
-  socket.on("leave_room", (data) => {
-    socket.leave(data.roomId);
-    socket.emit("left_room");
-    console.log(`left room: ${data.roomId}`);
-    console.log(socket.rooms);
-  });
-
-  socket.on("card_picked", (data) => {
-    console.log("card picked");
-    console.log(data);
-    console.log(socket.rooms);
-
-    //send to front end
-    io.in(data.room).emit("display_picked_card", data);
+      io.in(room.roomId).emit("new_user_joins", room);
+    } else {
+      //handle error
+    }
   });
 });
 
