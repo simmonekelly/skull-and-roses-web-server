@@ -23,21 +23,33 @@ const io = new Server(server, {
   },
 });
 
+const rooms = [];
+
 io.on("connection", (socket) => {
   console.log(`user connected: ${socket.id}`);
 
-  //   socket.on("hello", (data) => {
-  //     console.log({ data });
-  //   });
-
   //   creating a new game room
-  socket.on("create_room", (callback) => {
+  socket.on("create_room", (createRoom) => {
     const roomId = uniqueNamesGenerator({
       dictionaries: [adjectives, colors, animals],
       separator: "-",
     });
-    console.log({ roomId });
-    callback(roomId);
+
+    rooms.push(roomId);
+    createRoom(roomId);
+    //need to actually join room socket
+  });
+
+  socket.on("join_room", (location, joinRoom) => {
+    console.log(location);
+    if (rooms.includes(location.id)) {
+      joinRoom(location.id);
+    } else {
+      rooms.push(location.id);
+      joinRoom(location.id);
+    }
+
+    // need to join room socket
   });
 });
 
