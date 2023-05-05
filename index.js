@@ -35,21 +35,28 @@ io.on("connection", (socket) => {
       separator: "-",
     });
 
-    rooms.push(roomId);
-    createRoom(roomId);
-    //need to actually join room socket
+    const room = {
+      roomId: roomId,
+      players: [socket.id],
+    };
+
+    rooms.push(room);
+    socket.join(room.roomId);
+    createRoom(room);
   });
 
   socket.on("join_room", (location, joinRoom) => {
     console.log(location);
-    if (rooms.includes(location.id)) {
-      joinRoom(location.id);
+    if (rooms.find((room) => room.roomId === location.id)) {
+      const room = rooms.find((room) => room.roomId === location.id);
+      room.players.push(socket.id);
+      socket.join(room.roomId);
+      joinRoom(room);
     } else {
-      rooms.push(location.id);
-      joinRoom(location.id);
+      //we want this to error out
     }
 
-    // need to join room socket
+    // need to emit update to room with new player number
   });
 });
 
