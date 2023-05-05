@@ -41,17 +41,21 @@ io.on("connection", (socket) => {
     };
 
     rooms.push(room);
-    socket.join(room.roomId);
+    socket.join(roomId);
     createRoom(room);
   });
 
-  socket.on("join_room", (location, joinRoom) => {
-    console.log(location);
-    if (rooms.find((room) => room.roomId === location.id)) {
-      const room = rooms.find((room) => room.roomId === location.id);
+  socket.on("join_room", (roomToJoin, joinRoom) => {
+    console.log(`${socket.id} joined room ${roomToJoin}`);
+    if (rooms.find((room) => room.roomId === roomToJoin)) {
+      const room = rooms.find((room) => room.roomId === roomToJoin);
       room.players.push(socket.id);
       socket.join(room.roomId);
       joinRoom(room);
+
+      io.in(room.roomId).emit("new_user_joins", room);
+
+      //wont emit to room people already in room
     } else {
       //we want this to error out
     }
