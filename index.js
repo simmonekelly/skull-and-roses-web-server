@@ -24,7 +24,7 @@ const io = new Server(server, {
 });
 
 const rooms = [];
-const baseCards = ["rose", "rose", "skull", "rose", "rose"]
+const baseCards = ["rose", "rose", "skull", "rose", "rose"];
 
 const findRoom = (currentRoom) => {
   const filteredRoom = rooms.find((room) => room.roomId === currentRoom);
@@ -142,7 +142,7 @@ io.on("connection", (socket) => {
       callback();
 
       io.in(data.room.roomId).emit(
-        "update_countdown",
+        "show_guess_result_modal",
         data.room,
         data.user.id,
         userGuess
@@ -154,55 +154,59 @@ io.on("connection", (socket) => {
 
   socket.on(
     "update_mat_status",
-    (currentRoom, user, currentUser, updatedMatStatus, callback) => {
-      console.log({currentRoom, user, currentUser, updatedMatStatus, callback})
-      const data = findRoomAndUser(currentRoom, user);
-      const currentUserData = findUser(data.room, currentUser)
+    (
+      currentRoomId,
+      guessingUserId,
+      currentUserId,
+      updatedMatStatus,
+      callback
+    ) => {
+      console.log({
+        currentRoomId,
+        guessingUserId,
+        currentUserId,
+        updatedMatStatus,
+        callback,
+      });
+      const data = findRoomAndUser(currentRoomId, guessingUserId);
+      const currentUserData = findUser(data.room, currentUserId);
 
-      if (data && currentUser) {
-
+      if (data && currentUserId) {
         if (updatedMatStatus) {
-  
-          //reset current user cards
-          currentUserData.cards = baseCards;
-
-          //add logic to check what current status is
-          //if true then emit event that x user has won the game
           console.log("true");
-          if (user === currentUser) {
+          currentUserData.cards = baseCards;
+          if (guessingUserId === currentUserId) {
             //update current user
             currentUserData.matStatus = updatedMatStatus;
             callback(currentUserData);
-          } else {
-
-            callback(currentUserData);
           }
 
-          //reset all user cards
-          data.room.players.forEach((player) => (
-            player.cards = baseCards
-          ))
           data.user.matStatus = updatedMatStatus;
-          data.room.stockPile = []
-          console.log({data})
           io.in(data.room.roomId).emit("update_room", data.room);
-          io.in(data.room.roomId).emit("show_update_modal");
         } else {
           console.log("false");
-          //for now removes the last card a user has
-
-          //will need to log how many cards each user has, and rest accordingly
-          //remove 1 card from user that lost
-          data.user.cards.splice(data.user.cards.length - 1, 1);
-          if (user === currentUser) {
-            callback(data.user);
-          }
-          //emit update modal
           io.in(data.room.roomId).emit("update_room", data.room);
         }
       } else {
         console.log("cant update mat status: no room or user");
       }
+    }
+  );
+
+  socket.on(
+    "reset_for_next_round",
+    (currentRoomId, currentUserId, callback) => {
+      console.log("reset");
+      const data = findRoomAndUser(currentRoomId, currentUserId);
+      //why is this not running v
+      data.room.players.forEach((player) => {
+        console.log({cards: player.cards, baseCards});
+        player.cards = baseCards;
+      }
+      );
+      data.room.stockPile = [];
+      callback(data.user);
+      io.in(data.room.roomId).emit("update_room", data.room);
     }
   );
 });
