@@ -21,6 +21,12 @@ const io = new Server(server, {
     origin: "*",
     methods: ["GET", "POST"],
   },
+  connectionStateRecovery: {
+    // the backup duration of the sessions and the packets
+    maxDisconnectionDuration: 2 * 60 * 1000,
+    // whether to skip middlewares upon successful recovery
+    skipMiddlewares: true,
+  },
 });
 
 const rooms = [];
@@ -53,7 +59,14 @@ const findRoomAndUser = (currentRoom, currentUser) => {
 };
 
 io.on("connection", (socket) => {
-  console.log(`user connected: ${socket.id}`);
+  if (socket.recovered) {
+    console.log("recovered");
+    // recovery was successful: socket.id, socket.rooms and socket.data were restored
+  } else {
+    console.log("new");
+    // new or unrecoverable session
+    console.log({ user: socket.id });
+  }
 
   //   creating a new game room
   socket.on("create_room", (createRoom) => {
@@ -106,6 +119,7 @@ io.on("connection", (socket) => {
       };
       socket.join(room.roomId);
       joinRoom(joinedRoom);
+      console.log({ room: socket.rooms });
 
       io.in(room.roomId).emit("new_user_joins", room);
     } else {
@@ -200,15 +214,33 @@ io.on("connection", (socket) => {
       const data = findRoomAndUser(currentRoomId, currentUserId);
       //why is this not running v
       data.room.players.forEach((player) => {
-        console.log({cards: player.cards, baseCards});
+        console.log({ cards: player.cards, baseCards });
         player.cards = baseCards;
-      }
-      );
+      });
       data.room.stockPile = [];
       callback(data.user);
       io.in(data.room.roomId).emit("update_room", data.room);
     }
   );
+
+  socket.on("leave_room", (roomToLeave, currentUserId, callback) => {
+    console.log(`${currentUserId} left room ${roomToLeave}`);
+    if (rooms.find((room) => room.roomId === roomToLeave)) {
+      const room = rooms.find((room) => room.roomId === roomToLeave);
+      const playerIndex = room.players.findIndex(
+        (user) => user.id === currentUserId
+      );
+
+      room.players.splice(playerIndex, 1);
+
+      socket.leave(roomToLeave);
+      callback();
+
+      io.in(room.roomId).emit("update_room", room);
+    } else {
+      //handle error
+    }
+  });
 });
 
 server.listen(8080, () => {
