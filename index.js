@@ -4,6 +4,7 @@ const app = express();
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 const {
   uniqueNamesGenerator,
@@ -11,7 +12,6 @@ const {
   animals,
   colors,
 } = require("unique-names-generator");
-
 app.use(cors());
 
 const server = http.createServer(app);
@@ -21,13 +21,24 @@ const io = new Server(server, {
     origin: "*",
     methods: ["GET", "POST"],
   },
+  connectionStateRecovery: {
+    // the backup duration of the sessions and the packets
+    maxDisconnectionDuration: 2 * 60 * 1000,
+    // whether to skip middlewares upon successful recovery
+    skipMiddlewares: true,
+  }
 });
 
 const rooms = [];
 const baseCards = ["rose", "rose", "skull", "rose", "rose"];
 
-const findRoom = (currentRoom) => {
-  const filteredRoom = rooms.find((room) => room.roomId === currentRoom);
+const findRoom = (currentRoomId) => {
+  const filteredRoom = rooms.find((room) => room.roomId === currentRoomId);
+  return filteredRoom;
+};
+
+const findRoomWithData = (allRooms, currentRoomId) => {
+  const filteredRoom = allRooms.find((room) => room.roomId === currentRoomId);
   return filteredRoom;
 };
 
@@ -53,6 +64,15 @@ const findRoomAndUser = (currentRoom, currentUser) => {
 };
 
 io.on("connection", (socket) => {
+
+  if (socket.recovered) {
+    console.log('recovered')
+    // recovery was successful: socket.id, socket.rooms and socket.data were restored
+  } else {
+    console.log('new')
+    console.log({socket})
+    // new or unrecoverable session
+  }
   console.log(`user connected: ${socket.id}`);
 
   //   creating a new game room
@@ -64,6 +84,7 @@ io.on("connection", (socket) => {
 
     const currentUser = {
       id: socket.id,
+      name: "testName",
       cards: ["rose", "rose", "skull", "rose", "rose"],
       matStatus: false,
       gameControler: true,
@@ -80,7 +101,18 @@ io.on("connection", (socket) => {
       currentUser: currentUser,
     };
 
-    rooms.push(room);
+    fs.readFile("./data/testData.json", "utf-8", (err, data) => {
+      if (err) throw err;
+      const roomData = JSON.parse(data);
+      roomData.push(room);
+
+      const addRoom = JSON.stringify(roomData);
+      fs.writeFile("./data/testData.json", addRoom, (err) => {
+        if (err) throw err;
+        console.log("data has been saved");
+      });
+    });
+
     socket.join(roomId);
     createRoom(newRoom);
   });
@@ -88,29 +120,64 @@ io.on("connection", (socket) => {
   //when a user joins a game room
   socket.on("join_room", (roomToJoin, joinRoom) => {
     console.log(`${socket.id} joined room ${roomToJoin}`);
-    if (rooms.find((room) => room.roomId === roomToJoin)) {
-      const room = rooms.find((room) => room.roomId === roomToJoin);
 
-      const currentUser = {
-        id: socket.id,
-        cards: ["rose", "rose", "skull", "rose", "rose"],
-        matStatus: false,
-        gameControler: false,
-      };
+    const currentUser = {
+      id: socket.id,
+      cards: ["rose", "rose", "skull", "rose", "rose"],
+      matStatus: false,
+      gameControler: false,
+    };
 
-      room.players.push(currentUser);
+    const joinedRoom = {
+      currentUser,
+    };
 
-      const joinedRoom = {
-        room,
-        currentUser,
-      };
-      socket.join(room.roomId);
-      joinRoom(joinedRoom);
+    fs.readFile("./data/testData.json", "utf-8", (err, data) => {
+      if (err) throw err;
+      const allRooms = JSON.parse(data);
+      const room = allRooms.find((room) => room.roomId === roomToJoin);
 
-      io.in(room.roomId).emit("new_user_joins", room);
-    } else {
-      //handle error
-    }
+      if (room) {
+        room.players.push(currentUser);
+        const updatedRoom = { ...joinedRoom, room };
+        console.log({updatedRoom, room})
+        socket.join(room.roomId);
+        joinRoom(updatedRoom);
+        io.in(room.roomId).emit("new_user_joins", room);
+      } else {
+        //handle error
+      }
+
+      const addUser = JSON.stringify(allRooms);
+      fs.writeFile("./data/testData.json", addUser, (err) => {
+        if (err) throw err;
+        console.log("data has been saved");
+      });
+    });
+
+    // if (rooms.find((room) => room.roomId === roomToJoin)) {
+    //   const room = rooms.find((room) => room.roomId === roomToJoin);
+
+    //   const currentUser = {
+    //     id: socket.id,
+    //     cards: ["rose", "rose", "skull", "rose", "rose"],
+    //     matStatus: false,
+    //     gameControler: false,
+    //   };
+
+    //   room.players.push(currentUser);
+
+    //   const joinedRoom = {
+    //     room,
+    //     currentUser,
+    //   };
+    //   socket.join(room.roomId);
+    //   joinRoom(joinedRoom);
+
+    // io.in(room.roomId).emit("new_user_joins", room);
+    // } else {
+    //   //handle error
+    // }
   });
 
   socket.on(
@@ -200,10 +267,9 @@ io.on("connection", (socket) => {
       const data = findRoomAndUser(currentRoomId, currentUserId);
       //why is this not running v
       data.room.players.forEach((player) => {
-        console.log({cards: player.cards, baseCards});
+        console.log({ cards: player.cards, baseCards });
         player.cards = baseCards;
-      }
-      );
+      });
       data.room.stockPile = [];
       callback(data.user);
       io.in(data.room.roomId).emit("update_room", data.room);
