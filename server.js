@@ -12,6 +12,9 @@ const {
   colors,
 } = require("unique-names-generator");
 
+require('dotenv').config()
+const { PORT } = process.env;
+
 app.use(cors());
 
 const server = http.createServer(app);
@@ -63,9 +66,9 @@ io.on("connection", (socket) => {
     console.log("recovered");
     // recovery was successful: socket.id, socket.rooms and socket.data were restored
   } else {
-    console.log("new");
-    // new or unrecoverable session
-    console.log({ user: socket.id });
+    // console.log("new");
+    // // new or unrecoverable session
+    // console.log({ user: socket.id });
   }
 
   //   creating a new game room
@@ -243,7 +246,7 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(8080, () => {
-  console.log("Server Started on http://localhost:8080");
+server.listen(PORT, () => {
+  console.log(`Server Started on ${PORT}`);
   console.log("Press CTRL + C to stop server");
 });
