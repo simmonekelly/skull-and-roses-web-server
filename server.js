@@ -247,6 +247,6 @@ io.on("connection", (socket) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Server Started on http://localhost:${PORT}`);
+  console.log(`Server Started on ${PORT}`);
   console.log("Press CTRL + C to stop server");
 });
