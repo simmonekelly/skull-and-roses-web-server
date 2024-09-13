@@ -1,10 +1,9 @@
 // initialize Express in project
 const express = require("express");
-const app = express();
-const http = require("http");
+// const http = require("http");
+const { createServer } = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
-const { v4: uuidv4 } = require("uuid");
 const {
   uniqueNamesGenerator,
   adjectives,
@@ -12,14 +11,19 @@ const {
   colors,
 } = require("unique-names-generator");
 
-require('dotenv').config()
+require("dotenv").config();
 const { PORT } = process.env;
+
+const app = express();
+const httpServer = createServer(app);
 
 app.use(cors());
 
-const server = http.createServer(app);
+app.get("/", (req, res) => {
+  res.send("<h1>Hello world, Express on Vercel</h1>");
+});
 
-const io = new Server(server, {
+const io = new Server(httpServer, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
@@ -246,7 +250,7 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server Started on ${PORT}`);
   console.log("Press CTRL + C to stop server");
 });
